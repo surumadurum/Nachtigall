@@ -17,10 +17,19 @@ import java.util.List;
 
 import android.util.Log;
 
+import oscP5.*;
+import netP5.*;
+
 
 public class Controller_plain extends PApplet {
 
     final static boolean DEBUG = true;
+
+    public static final int remotePort = 13000, localPort = 12000;
+
+
+    private OscP5 oscP5;
+    private NetAddress myRemoteLocation;
 
     List<RectButton> buttons;
 
@@ -46,8 +55,20 @@ public class Controller_plain extends PApplet {
         textMode(CENTER);
         fill(255);
 
-        sl_expression = new VScrollbar(0, 20, 80, height - 20, 3 * 5 + 1);
-        sl_expression = new VScrollbar(0, 20, 80, height - 20, 3 * 5 + 1);
+        oscP5 = new OscP5(this,localPort);
+
+        myRemoteLocation = new NetAddress("255.255.255.255",remotePort);
+
+
+        sl_expression = new VScrollbar(0, 20, 80, height - 20, 3 * 5 + 1)
+        {
+            @Override
+            public void OnValueChanged() {
+//                Log.d("EVENT","Event listener received value changed");
+                Log.d("EVENT",String.format("%f",abs(oldpos-getPos())));
+            }
+        };
+//        sl_expression = new VScrollbar(0, 20, 80, height - 20, 3 * 5 + 1);
 
 
         sl_tempo = new HScrollbar(80, height - 20, width - 80, 80, 10);
@@ -56,8 +77,13 @@ public class Controller_plain extends PApplet {
 
         for (int y = 0; y < 2; y++) {
             for (int x = 0; x < 3; x++)
-                buttons.add(new RectButton(200 + 210 * x, 80 + 210 * y, 200, new color(10, 0, 100, 255), new color(100, 70, 255, 255)));
-
+                buttons.add(new RectButton(200 + 210 * x, 80 + 210 * y, 200, new color(10, 0, 100, 255), new color(100, 70, 255, 255))
+                {
+                    @Override
+                    public void onPress(){
+                        Log.d("EVENT","Listener recvd button press");
+                    }
+                });
         }
 
         mActivePointers = new SparseArray<PointF>();
@@ -68,44 +94,20 @@ public class Controller_plain extends PApplet {
 
         background(255);
 
-        sl_expression.update();
-        sl_expression.display();
+        sl_expression.draw();
 
-        sl_tempo.update();
-        sl_tempo.display();
+        sl_tempo.draw();
 
 
-        //check for PRESS & RELEASE events on buttons (should be inside class)
+        //check for PRESS & RELEASE events on buttons (TODO should be inside class)
         for (RectButton button_ : buttons) {
-            button_.display();
-            button_.update();
-
-            //comapre state to last state
-            boolean last_state = button_.last_state();
-            boolean cur_state = button_.pressed();
-
-            if (last_state != cur_state) //something changed
-            {
-                if (cur_state == true) {
-
-                    //PRESS EVENT
-                    Log.d("EVENT", "PRESS");
-
-                    //as we only want one to be clickable at a time, disable the other buttons
-                    for (RectButton but_ : buttons)
-                        if (but_ != button_)
-                            but_.disable();
-                } else {
-                    //RELEASE EVENT
-                    Log.d("EVENT", "RELEASE");
-                    for (RectButton but_ : buttons)
-                        but_.enable();
-                }
-            }
+            button_.draw();
         }
 
 
         //check for changed values of sliders
+        //// TODO: 06.10.17
+
 
 
         for (int size = mActivePointers.size(), i = 0; i < size; i++) {
@@ -192,7 +194,7 @@ public class Controller_plain extends PApplet {
 
         int swidth, sheight;    // width and height of bar
         int xpos, ypos;         // x and y position of bar
-        float spos, newspos;    // x position of slider
+        float spos, newspos,oldpos;    // x position of slider
         int sposMin, sposMax;   // max and min values of slider
         int loose;              // how loose/heavy
         boolean over;           // is the mouse over the slider?
@@ -201,9 +203,7 @@ public class Controller_plain extends PApplet {
 
         int _touchX, _touchY; //holds the position of the pointer that was found to be over scrollbar
 
-
-
-        boolean enabled = false;
+        boolean enabled = true;
         boolean showLabel = true;
 
         boolean isEnabled() {
@@ -229,6 +229,15 @@ public class Controller_plain extends PApplet {
             showLabel = false;
 
         }
+
+        public void OnValueChanged(){};
+
+        abstract void update();
+
+        public void draw()
+        {
+
+        }
     }
 
 
@@ -246,15 +255,14 @@ public class Controller_plain extends PApplet {
             sposMin = xpos;
             sposMax = xpos + swidth - sheight;
             loose = l;
+            oldpos = spos;
         }
 
         void update() {
-            if (over()) {
-                over = true;
-            } else {
-                over = false;
-            }
-            if (/*mousePressed() && */over && enabled) {    //on a touch, we don't need to check whether it's pressed
+
+
+
+            if (/*mousePressed() && */over() && enabled) {    //on a touch, we don't need to check whether it's pressed
                 locked = true;
             }
             else ///*!mousePressed()*/!over)
@@ -267,6 +275,12 @@ public class Controller_plain extends PApplet {
             }
             if (abs(newspos - spos) > 1) {
                 spos = spos + (newspos - spos) / loose;
+            }
+
+            if(abs(oldpos-getPos()) > 0.0001)
+            {
+                this.OnValueChanged();
+                oldpos = getPos();
             }
         }
 
@@ -292,7 +306,11 @@ public class Controller_plain extends PApplet {
             return false;
         }
 
-        void display() {
+        public void draw() {
+
+            update();
+
+
             fill(255);
             rect(xpos, ypos, swidth, sheight);
             if (over || locked) {
@@ -316,7 +334,7 @@ public class Controller_plain extends PApplet {
     }
 
 
-    class VScrollbar extends Scrollbar{
+     class VScrollbar extends Scrollbar{
 
         VScrollbar(int xp, int yp, int sw, int sh, int l) {
             swidth = sw;
@@ -330,16 +348,13 @@ public class Controller_plain extends PApplet {
             sposMin = ypos;
             sposMax = ypos - swidth + sheight;
             loose = l;
+            oldpos = spos;
 
         }
 
         void update() {
-            if (over()) {
-                over = true;
-            } else {
-                over = false;
-            }
-            if (/*mousePressed() && */over && enabled) {    //on a touch, we don't need to check whether it's pressed
+
+            if (/*mousePressed() && */over() && enabled) {    //on a touch, we don't need to check whether it's pressed
                 locked = true;
             }
             else  //if (/*!mousePressed()*/!over) {      //same here
@@ -352,6 +367,17 @@ public class Controller_plain extends PApplet {
             if (abs(newspos - spos) > 1) {
                 spos = spos + (newspos - spos) / loose;
             }
+
+
+            text(abs(oldpos-getPos()),200,10);
+            if(abs(oldpos-getPos()) > 0.0001)
+            {
+
+                OnValueChanged();
+                oldpos = getPos();
+            }
+
+
         }
 
         int constrain(int val, int minv, int maxv) {
@@ -376,7 +402,10 @@ public class Controller_plain extends PApplet {
             return false;
         }
 
-        void display() {
+        public void draw() {
+
+            update();
+
             fill(255);
             rect(xpos, ypos, swidth, sheight);
             if (over || locked) {
@@ -396,6 +425,8 @@ public class Controller_plain extends PApplet {
             // 0 and the total width of the scrollbar
             return spos * ratio;
         }
+
+
     }
 
 
@@ -408,31 +439,23 @@ public class Controller_plain extends PApplet {
         color basecolor, highlightcolor;
         color currentcolor;
         boolean over = false;
+
         boolean pressed = false;
-        boolean locked = false;
 
         boolean enabled = true;
 
         int _touchX, _touchY;
 
-        void update() {
-            if (over() && enabled) {
-                currentcolor = highlightcolor;
-            } else {
-                currentcolor = basecolor;
-            }
-        }
-
-        boolean last_state() {
-            return locked;
+        private boolean last_state() {
+            return pressed;
         }
 
         boolean pressed() {
             if (over && enabled) {
-                locked = true;
+                pressed = true;
                 return true;
             } else {
-                locked = false;
+                pressed = false;
                 return false;
             }
         }
@@ -453,6 +476,54 @@ public class Controller_plain extends PApplet {
 
         abstract boolean over();
 
+
+        public void draw()
+        {
+            if (over() && enabled) {
+                currentcolor = highlightcolor;
+            } else {
+                currentcolor = basecolor;
+            }
+
+            //comapare state to last state
+            boolean last_state = this.last_state();
+            boolean cur_state = this.pressed();
+
+            if (last_state != cur_state) //something changed
+            {
+                if (cur_state == true) {
+
+                    //PRESS EVENT
+                    Log.d("EVENT", "PRESS");
+
+                    this.onPress();
+
+                    OscMessage myMessage = new OscMessage("/test");
+
+                    myMessage.add(123); /* add an int to the osc message */
+
+                  /* send the message */
+                    oscP5.send(myMessage, myRemoteLocation);
+
+                    //as we only want one to be clickable at a time, disable the other buttons
+                    for (RectButton but_ : buttons)
+                        if (but_ != this)
+                            but_.disable();
+                } else {
+                    //RELEASE EVENT
+                    Log.d("EVENT", "RELEASE");
+
+                    this.onRelease();
+
+                    for (RectButton but_ : buttons)
+                        but_.enable();
+                }
+            }
+        }
+
+        //class that can be overwritten
+        public void onPress(){};
+        public void onRelease(){};
 
     }
 
@@ -487,7 +558,9 @@ public class Controller_plain extends PApplet {
             }
         }
 
-        void display() {
+        @Override
+        public void draw() {
+            super.draw();
             stroke(255);
             fill(currentcolor.r, currentcolor.b, currentcolor.g, currentcolor.alpha);
             ellipse(x, y, size, size);
@@ -531,7 +604,9 @@ public class Controller_plain extends PApplet {
             return false;
         }
 
-        void display() {
+        @Override
+        public void draw() {
+            super.draw();
             stroke(255);
             fill(currentcolor.r, currentcolor.b, currentcolor.g, currentcolor.alpha);
             rect(x, y, size, size);

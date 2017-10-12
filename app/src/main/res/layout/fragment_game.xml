@@ -1,0 +1,52 @@
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context="robertliebner.nachtigall_musiccontrol.Game">
+
+    <!-- TODO: Update blank fragment layout -->
+
+    <!--will be added programatically-->
+    <!--<ImageView-->
+        <!--android:id="@+id/koenig"-->
+        <!--android:layout_width="wrap_content"-->
+        <!--android:layout_height="wrap_content"-->
+        <!--app:srcCompat="@mipmap/ic_koenig" />-->
+
+    <!--<ImageView-->
+        <!--android:id="@+id/nachtigall"-->
+        <!--android:layout_width="0dp"-->
+        <!--android:layout_height="wrap_content"-->
+        <!--app:srcCompat="@mipmap/ic_nachtigall" />-->
+    <TextView
+        android:id="@+id/txtAnnounce"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerHorizontal="true"
+        android:layout_centerVertical="true"
+        android:alpha="0"
+        android:text="TextView"
+        android:textAlignment="center" />
+
+    <TextView
+        android:id="@+id/txtScore"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentEnd="true"
+        android:layout_alignParentTop="true"
+        android:text="SCORE" />
+
+    <TextView
+        android:id="@+id/txtCountDown"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignStart="@+id/txtAnnounce"
+        android:layout_alignTop="@+id/txtAnnounce"
+        android:alpha="0.5"
+        android:scaleX="2"
+        android:scaleY="2"
+        android:text="TextView"
+        android:textSize="30sp" />
+
+</RelativeLayout>
